@@ -44,7 +44,6 @@ function renderHome(){
  let content=`<div class="eyebrow">${esc(new Intl.DateTimeFormat('zh-CN',{month:'long',day:'numeric',weekday:'long'}).format(d))}</div><h1 class="headline">今天刷哪张卡？</h1><p class="subhead">按所选刷卡日期，比较新消费的预计还款时间。</p>`;
  if(!s.cards.length)return content+emptyCards();
  content+=s.cards.map(ruleReview).join('');
- content+='<div class="section-head"><h2>新消费用卡推荐</h2></div><p class="tip">以下按所选刷卡日期计算新消费对应的账单和还款日。</p>';
  const spending=amountFilter!==''&&Number(amountFilter)>0?Number(amountFilter):0;
  const rows=s.cards.map(c=>L.spend(c,d,s.overrides)).map(r=>({...r,eligible:!(spending>0&&r.card.available!==''&&r.card.available!=null&&Number(r.card.available)<spending)})).sort((a,b)=>Number(b.eligible)-Number(a.eligible)||b.days-a.days);
  const winner=rows.find(r=>r.eligible);
