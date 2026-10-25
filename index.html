@@ -2,21 +2,21 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#172d57">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="description" content="信用卡最佳用卡日期计算与还款提醒。">
   <title>卡期 · 智能用卡助手</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=1.1.5">
-  <link rel="apple-touch-icon" href="./icons/icon-180-v1.1.5.png">
-  <link rel="icon" href="./icons/icon-192-v1.1.5.png">
-  <link rel="stylesheet" href="./style.css?v=1.1.5">
+  <link rel="manifest" href="./manifest.webmanifest?v=1.1.6">
+  <link sizes="180x180" rel="apple-touch-icon" href="./icons/icon-180-v1.1.6.png">
+  <link rel="icon" href="./icons/icon-192-v1.1.6.png">
+  <link rel="stylesheet" href="./style.css?v=1.1.6">
 </head>
 <body>
   <div class="shell">
     <header class="topbar">
-      <div class="brand"><img class="brand-symbol" src="./icons/icon-192-v1.1.5.png" width="41" height="41" alt=""><span>卡期<small>智能用卡助手</small></span></div>
+      <div class="brand"><img class="brand-symbol" src="./icons/icon-192-v1.1.6.png" width="41" height="41" alt=""><span>卡期<small>智能用卡助手</small></span></div>
       <button type="button" class="iconbtn gear" data-action="settings" aria-label="设置">⚙</button>
     </header>
     <main id="app" aria-live="polite"></main>
@@ -88,12 +88,16 @@
       <input id="importFile" type="file" accept=".json,application/json" hidden>
       <hr>
       <button class="destructive full" type="button" data-action="clear-demo">清除演示卡片</button>
-      <p class="fineprint">版本 1.1.5 · 本工具只做日期估算与提醒，不连接银行、不代替银行账单、不执行还款。</p>
+      <button type="button" class="outline full" data-action="check-web-update">检查网页更新</button>
+      <p id="appUpdateStatus" class="helper" role="status">打开卡期或回到前台时自动检查网页更新。手机桌面图标由 iOS 管理，网页无法强制替换已有图标。</p>
+      <p class="fineprint">版本 1.1.6 · 本工具只做日期估算与提醒，不连接银行、不代替银行账单、不执行还款。</p>
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="./logic.js?v=1.1.5"></script>
-  <script src="./push-config.js?v=1.1.5"></script>
-  <script src="./app.js?v=1.1.5"></script>
+  <script src="./logic.js?v=1.1.6"></script>
+  <script src="./push-config.js?v=1.1.6"></script>
+  <script src="./interaction.js?v=1.1.6"></script>
+  <script src="./app-update.js?v=1.1.6"></script>
+  <script src="./app.js?v=1.1.6"></script>
 </body>
 </html>

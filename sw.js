@@ -1,5 +1,5 @@
-const CACHE='kaqi-static-pages-v1.1.5';
-const ASSETS=['./','./index.html','./style.css?v=1.1.5','./logic.js?v=1.1.5','./push-config.js?v=1.1.5','./app.js?v=1.1.5','./manifest.webmanifest?v=1.1.5','./icons/icon-180-v1.1.5.png','./icons/icon-192-v1.1.5.png','./icons/icon-512-v1.1.5.png'];
+const CACHE='kaqi-static-pages-v1.1.6';
+const ASSETS=['./','./index.html','./style.css?v=1.1.6','./logic.js?v=1.1.6','./push-config.js?v=1.1.6','./app.js?v=1.1.6','./interaction.js?v=1.1.6','./app-update.js?v=1.1.6','./manifest.webmanifest?v=1.1.6','./icons/icon-180-v1.1.6.png','./icons/icon-192-v1.1.6.png','./icons/icon-512-v1.1.6.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS.map(path=>new Request(new URL(path,self.registration.scope),{cache:'reload'})))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(x=>x.startsWith('kaqi-static-')&&x!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
@@ -10,7 +10,7 @@ self.addEventListener('push',e=>{
  let payload={title:'信用卡还款提醒',body:'有信用卡即将到期，请打开应用核对。'};
  try{payload=e.data?JSON.parse(e.data.text()):payload;}catch(_){}
  e.waitUntil(self.registration.showNotification(payload.title||'信用卡还款提醒',{
-  body:payload.body||'请核对还款日期',icon:'./icons/icon-192-v1.1.5.png',badge:'./icons/icon-192-v1.1.5.png',tag:payload.tag||'card-reminder',renotify:true,silent:false,data:{url:new URL('./?tab=due',self.registration.scope).href}
+  body:payload.body||'请核对还款日期',icon:'./icons/icon-192-v1.1.6.png',badge:'./icons/icon-192-v1.1.6.png',tag:payload.tag||'card-reminder',renotify:true,silent:false,data:{url:new URL('./?tab=due',self.registration.scope).href}
  }));
 });
 self.addEventListener('notificationclick',e=>{

@@ -1,4 +1,4 @@
-# 卡期 · 智能用卡助手 v1.1.5
+# 卡期 · 智能用卡助手 v1.1.6
 
 - 网站：<https://baimulinv.github.io/kaqi-card/>
 - 源码：<https://github.com/baimulinv/kaqi-card>
@@ -55,8 +55,20 @@
 
 固定还款日新增自动判断：取账单之后最近的固定还款日期；保留人工指定当月/次月的规则。表单显示日期预览。旧记录若设为账单次月且还款日在账单日之后，会显示月份核对入口，用户核对后保存；不静默改写已有卡片、还款确认或日期校正。
 
-## 首页和品牌图标 v1.1.5
+## 首页和品牌图标 v1.1.6
 
 移除推荐卡上方重复的“新消费用卡推荐”标题与说明。新卡期图标采用深蓝背景、象牙白卡片日历与薄荷色日期标记，网页页头、favicon、Apple触屏图标、Web App Manifest及推送通知图标统一使用新版本文件名。应用标识、地址和已有通知订阅不变。
 
 iPhone桌面图标由系统缓存，网页内图标更新不代表已有桌面图标立即刷新。不要为换图标删除应用或清理数据；卡片仍在本机存储。
+
+## 用户指定图标、手势与网页更新 v1.1.6
+
+采用用户最后提供的浅蓝色卡片日历原图，只缩放为180/192/512像素。网页、Apple图标、Manifest、通知图标统一使用新图，并将历史图标URL也指向新图，增加根目录apple-touch-icon.png兼容入口；原图与替换前图标均在本地保留。Manifest id/start_url/scope不变。
+
+限制页面双击与双指缩放，保留单指滚动、普通点击、表单编辑；触屏表单字号至少16px避免iOS聚焦自动放大。系统辅助功能或浏览器自身的缩放行为不属于网页可完全控制的范围，仍需用户iPhone实测。
+
+启动、回前台、恢复网络时自动检查Service Worker更新，注册不使用HTTP缓存；已就绪的新版本在没有未结束表单编辑或待完成推送操作时刷新载入。设置中增加“检查网页更新”，离线会明确提示。不会清理localStorage或重新登记推送。
+
+这里的自动更新仅指网页程序。iPhone主屏幕已安装图标由iOS管理，没有网页强制刷新的接口；更新Manifest和图标地址不能保证既有桌面图标自动变化。不要为换图标直接删除已有应用/清理数据；如需要重新添加桌面入口，应先导出备份，并在新入口核对资料与通知后再考虑处理旧入口。
+
+参考：https://www.w3.org/TR/appmanifest/#updating-the-manifest ，https://webkit.org/blog/13878/ ，https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/HandlingEvents/HandlingEvents.html 。

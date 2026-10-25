@@ -255,6 +255,7 @@ async function act(action,target){let key=target.dataset.cycle,id=target.dataset
  case 'enable-push':await enablePush();break;case 'disable-push':await disablePush();break;case 'test-push':await testPush();break;
  case 'retry-push':await refreshPush();break;
  case 'export':await exportData();break;case 'import':$('#importFile').click();break;case 'ics':exportICS();break;
+ case 'check-web-update':if(window.KaqiUpdates)await window.KaqiUpdates.check(true);break;
  case 'clear-demo':{const count=s.cards.filter(x=>x.isDemo).length;if(!count){toast('没有演示卡片');break;}if(confirm(`清除 ${count} 张演示卡及其相关记录？`)){const ids=new Set(s.cards.filter(x=>x.isDemo).map(x=>x.id));s.cards=s.cards.filter(x=>!x.isDemo);for(const map of [s.paid,s.overrides,s.amounts])Object.keys(map).forEach(k=>{if(ids.has(k.split('|')[0]))delete map[k];});if(persist())toast('演示卡已清除');else toast(storageError());}break;}
  }
 }
@@ -272,7 +273,7 @@ $('#cardForm').addEventListener('change',()=>clearCardError());
 $('#cardForm').addEventListener('submit',handleCardSubmit);$('#dueForm').addEventListener('submit',handleDueSubmit);
 $('#importFile').addEventListener('change',e=>importData(e.target.files[0]));
 render();
-if('serviceWorker' in navigator&&location.protocol!=='file:'){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('Service worker unavailable',e)));}
+document.addEventListener('kaqi:before-update',e=>{if(pushBusy||pushChecking||storageProblem)e.preventDefault();});
 if(s.pushEnabled)refreshPush();
 window.addEventListener('online',()=>{if(s.pushEnabled)refreshPush();});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&s.pushEnabled)refreshPush();});
