@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#172d57">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="description" content="信用卡最佳用卡日期计算与还款提醒。">
+  <title>卡期 · 智能用卡助手</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-symbol">◈</span><span>卡期<small>智能用卡助手</small></span></div>
+      <button type="button" class="iconbtn gear" data-action="settings" aria-label="设置">⚙</button>
+    </header>
+    <main id="app" aria-live="polite"></main>
+    <nav class="bottomnav" aria-label="主导航">
+      <button class="navbtn active" data-tab="home"><span class="navsymbol">◈</span><span>用卡推荐</span></button>
+      <button class="navbtn" data-tab="due"><span class="navsymbol">◷</span><span>还款日程</span></button>
+      <button class="navbtn" data-tab="cards"><span class="navsymbol">▣</span><span>我的卡片</span></button>
+    </nav>
+  </div>
+
+  <dialog id="cardDialog" class="dialog">
+    <form id="cardForm" class="formstack">
+      <div class="dialogtop"><h2 id="cardDialogTitle">新增信用卡</h2><button type="button" class="close" data-action="close-card" aria-label="关闭">×</button></div>
+      <p class="muted tiptop">只填写必要信息，不需要完整卡号、密码或验证码。</p>
+      <input type="hidden" name="id">
+      <label>银行名称 <input name="bank" required maxlength="30" placeholder="例如：招商银行" autocomplete="off"></label>
+      <label>卡片昵称（选填） <input name="name" maxlength="30" placeholder="例如：日常消费卡" autocomplete="off"></label>
+      <div class="formgrid">
+        <label>卡号末四位（选填） <input name="last4" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="1234"></label>
+        <label>每月账单日 <select name="billingDay" id="billingDay"></select></label>
+      </div>
+      <label>还款日期计算方式
+        <select name="dueMode" id="dueMode">
+          <option value="offset">账单日后固定天数</option>
+          <option value="fixed">固定月/日期</option>
+        </select>
+      </label>
+      <div id="offsetGroup"><label>账单日后多少天还款 <input name="offsetDays" type="number" min="1" max="65" value="20" required></label></div>
+      <div id="fixedGroup" hidden class="formgrid">
+        <label>还款月份 <select name="fixedMonth"><option value="0">账单当月</option><option value="1">账单次月</option></select></label>
+        <label>每月还款日 <select name="fixedDay" id="fixedDay"></select></label>
+      </div>
+      <label>当前可用额度（选填，元） <input name="available" inputmode="decimal" type="number" min="0" step="0.01" placeholder="不填则不参与额度筛选"></label>
+      <p class="helper">请根据实际银行账单核对规则。账单日当天的消费可能跨期，不保证本工具推算结果与银行完全一致。</p>
+      <p id="cardFormError" class="form-error" role="alert" hidden></p>
+      <button type="submit" class="primary full">保存信用卡</button>
+    </form>
+  </dialog>
+
+  <dialog id="dueDialog" class="dialog">
+    <form id="dueForm" class="formstack">
+      <div class="dialogtop"><h2>核对本期还款</h2><button type="button" class="close" data-action="close-due" aria-label="关闭">×</button></div>
+      <div id="dueFormContext" class="field-intro"></div>
+      <input name="cycleId" type="hidden">
+      <label>银行实际还款日（可修改） <input name="actualDue" type="date" required></label>
+      <label>本期应还金额（选填，元） <input name="amount" type="number" min="0" step="0.01" placeholder="按银行账单填写"></label>
+      <p class="helper">修改后的实际还款日会优先用于本期提醒；请以银行账单为准。</p>
+      <button type="submit" class="primary full">保存本期信息</button>
+    </form>
+  </dialog>
+
+  <dialog id="settingsDialog" class="dialog">
+    <div class="formstack">
+      <div class="dialogtop"><h2>设置与数据</h2><button type="button" class="close" data-action="close-settings" aria-label="关闭">×</button></div>
+      <div class="settings-item"><div><strong>到期推送通知</strong><p class="muted">提前3天、提前1天、还款当天上午9点</p><p class="muted">GitHub Pages 静态版尚不支持自动声音提醒。请同时使用银行 App 提醒，或导出还款日历作为备用。</p></div><span id="pushStatus" class="status-pill">检查中</span></div>
+      <button class="primary full" type="button" data-action="enable-push" disabled title="GitHub Pages 无法运行云端推送服务">开启手机推送（需后端服务）</button>
+      <button class="outline full" type="button" data-action="test-push" disabled>测试手机通知</button>
+      <button class="outline full" type="button" data-action="disable-push" disabled>停止推送</button>
+      <hr>
+      <strong>备份与恢复</strong>
+      <p class="muted">信用卡信息默认仅保存在这台设备的浏览器中。请定期导出备份；支持设置密码加密备份。</p>
+      <button class="outline full" type="button" data-action="export">导出数据备份</button>
+      <button class="outline full" type="button" data-action="import">导入数据备份</button>
+      <button class="outline full" type="button" data-action="ics">导出还款日历（备用提醒）</button>
+      <input id="importFile" type="file" accept=".json,application/json" hidden>
+      <hr>
+      <button class="destructive full" type="button" data-action="clear-demo">清除演示卡片</button>
+      <p class="fineprint">版本 1.0.1 · 本工具只做日期估算与提醒，不连接银行、不代替银行账单、不执行还款。</p>
+    </div>
+  </dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="./logic.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
