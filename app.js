@@ -29,26 +29,36 @@ function cardError(message){const el=$('#cardFormError');el.textContent=message;
 function clearCardError(){const el=$('#cardFormError');el.hidden=true;el.textContent='';}
 
 function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3400);}
-function dueLabel(c){return c.dueMode==='fixed'?`账单${Number(c.fixedMonth)===0?'当月':'次月'}${c.fixedDay}日还款`:`账单日后${c.offsetDays}天还款`;}
+function dueLabel(c){return c.dueMode==='fixed'?(c.fixedMonth==='auto'?`每月${c.fixedDay}日（自动对应账期）`:`账单${Number(c.fixedMonth)===0?'当月':'次月'}${c.fixedDay}日还款`):`账单日后${c.offsetDays}天还款`;}
+function needsRuleReview(c){return c.dueMode==='fixed'&&Number(c.fixedMonth)===1&&Number(c.fixedDay)>Number(c.billingDay);}
+function ruleReview(c){return needsRuleReview(c)?`<div class="paper due-item"><strong>${pretty(c)} · 还款月份待核对</strong><p class="tip">当前保存为${esc(dueLabel(c))}，会让新消费多跨一个月。请按银行账单核对；若账单${c.billingDay}日对应同月${c.fixedDay}日还款，请使用自动判断。</p><button class="outline full" data-action="review-rule" data-id="${esc(c.id)}">核对并修正还款月份</button></div>`:'';}
+function renderCurrentDues(){
+ const rows=L.upcoming(s.cards,todayDate(),s.overrides,s.paid);
+ let html='<div class="section-head"><h2>最近待核对还款</h2><button class="linkbtn" data-tab-target="due">还款日程 ›</button></div>';
+ rows.slice(0,3).forEach(r=>{html+=`<div class="paper due-item"><div class="due-line"><div><div class="due-title">${pretty(r.card)}</div><div class="due-sub">预计 ${L.fullZh(r.due)}</div></div><span class="due-badge ${r.days<0?'over':r.days<=5?'near':''}">${labelDay(r.days)}</span></div></div>`;});
+ return html+'<p class="tip">按已保存的日期规则生成待核对账期；实际应还金额和日期请核对银行账单。</p>';
+}
 function pretty(c){return `${esc(c.bank)}${c.name && c.name!==c.bank?' · '+esc(c.name):''}`;}
 function displayName(c){return `${c.bank}${c.name && c.name!==c.bank?' · '+c.name:''}`;}
 function todayDate(){return L.today();}
 function labelDay(days){return days<0?`已过${-days}天`:days===0?'今天到期':days===1?'明天到期':`还有${days}天`;}
 function activeTab(which){tab=which;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));render();}
 function emptyCards(){return `<div class="paper empty"><div class="empty-icon">▣</div><h2>还没有添加信用卡</h2><p>只需录入每张卡的账单日和还款规则，<br>系统就能自动比较最佳刷卡日期。</p><button class="primary full" data-action="add">＋ 添加第一张信用卡</button><button class="linkbtn" data-action="demo">先用3张演示卡体验功能</button></div>`;}
-function cardLine(r,i,valid){const c=r.card;return `<div class="paper result"><div class="rank ${i===0&&valid?'first':''}">${i+1}</div><div class="grow"><div class="result-title">${pretty(c)}${c.last4?' · '+esc(c.last4):''}</div><div class="result-sub">预计还款 ${L.zh(r.due)} ${r.ambiguous?' · 账单日边界':''}${!valid?' · 额度不足':''}</div></div><div class="number"><strong>${r.days}</strong><small>天后还款</small></div></div>`;}
+function cardLine(r,i,valid){const c=r.card;return `<div class="paper result"><div class="rank ${i===0&&valid?'first':''}">${i+1}</div><div class="grow"><div class="result-title">${pretty(c)}${c.last4?' · '+esc(c.last4):''}</div><div class="result-sub">预计还款 ${L.zh(r.due)} ${r.ambiguous?' · 账单日边界':''}${!valid?' · 额度不足':''}</div></div><div class="number"><strong>${r.days}</strong><small>天后归还新消费</small></div></div>`;}
 function renderHome(){
  const d=L.fromISO(selected);
- let content=`<div class="eyebrow">${esc(new Intl.DateTimeFormat('zh-CN',{month:'long',day:'numeric',weekday:'long'}).format(d))}</div><h1 class="headline">今天刷哪张卡？</h1><p class="subhead">自动比较账单周期，优先推荐预计还款最晚的信用卡。</p>`;
+ let content=`<div class="eyebrow">${esc(new Intl.DateTimeFormat('zh-CN',{month:'long',day:'numeric',weekday:'long'}).format(d))}</div><h1 class="headline">今天刷哪张卡？</h1><p class="subhead">分别核对最近还款日期，以及新消费的预计还款时间。</p>`;
  if(!s.cards.length)return content+emptyCards();
+ content+=s.cards.map(ruleReview).join('')+renderCurrentDues();
+ content+='<div class="section-head"><h2>新消费用卡推荐</h2></div><p class="tip">以下按所选刷卡日期计算新消费对应的账单和还款日。</p>';
  const spending=amountFilter!==''&&Number(amountFilter)>0?Number(amountFilter):0;
  const rows=s.cards.map(c=>L.spend(c,d,s.overrides)).map(r=>({...r,eligible:!(spending>0&&r.card.available!==''&&r.card.available!=null&&Number(r.card.available)<spending)})).sort((a,b)=>Number(b.eligible)-Number(a.eligible)||b.days-a.days);
  const winner=rows.find(r=>r.eligible);
  if(winner){
-  content+=`<div class="recommend"><div class="rec-top"><span class="rec-label">最佳用卡推荐 · 预计</span><span class="tag">TOP 1</span></div><div class="rec-bank">${esc(winner.card.bank)}</div><div class="rec-name">${esc(winner.card.name)}${winner.card.last4?'　尾号 '+esc(winner.card.last4):''}</div><div class="rec-days"><strong>${winner.days}</strong><span>天后还款</span></div><div class="rec-foot"><div><small>预计入账所属账单日</small><strong>${L.fullZh(winner.statement)}</strong></div><div><small>预计最后还款日</small><strong>${L.fullZh(winner.due)}</strong></div></div></div>`;
+  content+=`<div class="recommend"><div class="rec-top"><span class="rec-label">新消费推荐 · 预计</span><span class="tag">TOP 1</span></div><div class="rec-bank">${esc(winner.card.bank)}</div><div class="rec-name">${esc(winner.card.name)}${winner.card.last4?'　尾号 '+esc(winner.card.last4):''}</div><div class="rec-days"><strong>${winner.days}</strong><span>天后归还新消费</span></div><div class="rec-foot"><div><small>预计入账所属账单日</small><strong>${L.fullZh(winner.statement)}</strong></div><div><small>预计最后还款日</small><strong>${L.fullZh(winner.due)}</strong></div></div></div>`;
  } else {content+=`<div class="paper empty"><h2>当前额度条件下无可推荐卡片</h2><p>请降低本次消费金额，或更新信用卡可用额度。</p></div>`;}
  content+=`<div class="paper date-card"><label for="selectedDate">选择刷卡日期</label><input id="selectedDate" type="date" value="${esc(selected)}"><div class="quickdates"><button class="pill ${selected===L.iso(todayDate())?'selected':''}" data-action="jump-date" data-days="0">今天</button><button class="pill ${selected===L.iso(L.addDays(todayDate(),1))?'selected':''}" data-action="jump-date" data-days="1">明天</button><button class="pill ${selected===L.iso(L.addDays(todayDate(),7))?'selected':''}" data-action="jump-date" data-days="7">7天后</button><button class="pill" data-action="jump-date" data-days="30">30天后</button></div><label for="spending" style="margin-top:15px">本次预计消费金额（可选）</label><input id="spending" type="number" min="0" inputmode="decimal" placeholder="填金额后筛选额度不足的卡" value="${esc(amountFilter)}"></div>`;
- content+=`<div class="section-head"><h2>信用卡免息期排名</h2><button class="linkbtn" data-tab-target="cards">管理卡片 ›</button></div>`;
+ content+=`<div class="section-head"><h2>新消费预计还款间隔</h2><button class="linkbtn" data-tab-target="cards">管理卡片 ›</button></div>`;
  rows.forEach((r,i)=>content+=cardLine(r,i,r.eligible));
  const borderline=rows.some(r=>r.ambiguous);
  content+=`<p class="tip">* 按刷卡日期估算，并非银行承诺的免息期。${borderline?'所选日期存在账单日当天消费，可能计入不同账期。':''}实际入账与最后还款日以银行账单为准。按期全额还款等条件满足时才可能享受免息。</p>`;
@@ -63,7 +73,7 @@ function renderDue(){
  if(!rows.length)return html+`<div class="paper empty"><div class="empty-icon">✓</div><h2>当前没有待核对事项</h2><p>添加信用卡后会自动生成还款日期。</p></div>`;
  rows.forEach(r=>{
   const changed=Boolean(s.overrides[r.cycleId]);const amt=s.amounts[r.cycleId];
-  html+=`<div class="paper due-item"><div class="due-line"><div><div class="due-title">${pretty(r.card)}</div><div class="due-sub">${L.fullZh(r.due)} · ${changed?'实际日期已校正':'系统预计日期'}</div></div><span class="due-badge ${r.days<0?'over':r.days<=3?'close':''}">${labelDay(r.days)}</span></div>${amt!==undefined&&amt!==''?`<div class="smallinfo">本期登记应还：¥ ${Number(amt).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>`:''}<div class="due-actions"><button class="outline" data-action="edit-due" data-cycle="${esc(r.cycleId)}">核对 / 改日期</button><button class="primary" data-action="mark-paid" data-cycle="${esc(r.cycleId)}">✓ 已还款</button></div></div>`;
+  html+=`<div class="paper due-item"><div class="due-line"><div><div class="due-title">${pretty(r.card)}</div><div class="due-sub">${L.fullZh(r.due)} · ${changed?'实际日期已校正':'系统预计日期'}</div></div><span class="due-badge ${r.days<0?'over':r.days<=3?'near':''}">${labelDay(r.days)}</span></div>${amt!==undefined&&amt!==''?`<div class="smallinfo">本期登记应还：¥ ${Number(amt).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>`:''}<div class="due-actions"><button class="outline" data-action="edit-due" data-cycle="${esc(r.cycleId)}">核对 / 改日期</button><button class="primary" data-action="mark-paid" data-cycle="${esc(r.cycleId)}">✓ 已还款</button></div></div>`;
  });
  html+=`<p class="notice">⚠ 尚未与银行连接。这里显示的是“待核对账期”，不代表实际存在欠款；账单金额、还款日期及是否已还清，均请以银行记录为准。</p>`;
  html+=`<div class="section-head"><h2>最近已确认还款</h2></div>`;
@@ -84,21 +94,33 @@ function renderCards(){let html=`<div class="eyebrow">个人卡片资料</div><h
 function render(){const main=$('#app'); main.innerHTML=(storageProblem?'<p class="storage-banner" role="alert">⚠ 当前浏览器不允许保存，修改不会保留。请换用支持存储的浏览器或 HTTPS 网站访问。</p>':'')+(tab==='due'?renderDue():tab==='cards'?renderCards():renderHome());document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));}
 function populateSelect(id){let el=$(id);for(let n=1;n<=31;n++)el.add(new Option(`${n}日`,String(n)));}
 populateSelect('#billingDay');populateSelect('#fixedDay');
-function toggleDueFields(){const isFixed=$('#dueMode').value==='fixed';$('#offsetGroup').hidden=isFixed;$('#fixedGroup').hidden=!isFixed;$('#cardForm [name=offsetDays]').required=!isFixed;}
-function openCard(id){
+function toggleDueFields(){const isFixed=$('#dueMode').value==='fixed';$('#offsetGroup').hidden=isFixed;$('#fixedGroup').hidden=!isFixed;$('#cardForm [name=offsetDays]').required=!isFixed;updateRulePreview();}
+function updateRulePreview(){
+ const f=$('#cardForm'),val=k=>f.elements.namedItem(k).value;
+ const c={id:val('id')||'preview',billingDay:Number(val('billingDay')),dueMode:val('dueMode'),offsetDays:Number(val('offsetDays')),fixedDay:Number(val('fixedDay')),fixedMonth:val('fixedMonth')};
+ const el=$('#cardRulePreview');if(!el)return;
+ try{
+  const date=todayDate(),next=L.upcoming([c],date,{},{}).find(r=>r.days>=0),spend=L.spend(c,date,{});
+  const cycle=L.statementFor(c,date.getFullYear(),date.getMonth()+1),due=L.repaymentFor(c,cycle);
+  el.textContent=`规则示例：${L.zh(cycle)}账单 → ${L.zh(due)}还款。${next?'最近预计还款 '+L.zh(next.due)+'，'+labelDay(next.days)+'。':''}今天新消费 → ${L.zh(spend.statement)}账单 → ${L.zh(spend.due)}还款，${spend.days}天后。${needsRuleReview(c)?' 当前选择了账单次月；若银行是同月还款，请改为自动判断。':''}`;
+ }catch(_){el.textContent='填写账单日和还款规则后，将显示日期预览。';}
+}
+
+function openCard(id,suggestAuto=false){
  const c=s.cards.find(x=>x.id===id);$('#cardForm').reset();clearCardError();$('#cardDialogTitle').textContent=c?'编辑信用卡':'新增信用卡';
- const f=$('#cardForm'); const defs={id:'',bank:'',name:'',last4:'',billingDay:5,dueMode:'offset',offsetDays:20,fixedMonth:1,fixedDay:10,available:''};
- Object.entries({...defs,...c}).forEach(([key,val])=>{if(f.elements.namedItem(key))f.elements.namedItem(key).value=val??'';});toggleDueFields();$('#cardDialog').showModal();
+ const f=$('#cardForm'); const defs={id:'',bank:'',name:'',last4:'',billingDay:5,dueMode:'offset',offsetDays:20,fixedMonth:'auto',fixedDay:10,available:''};
+ Object.entries({...defs,...c}).forEach(([key,val])=>{if(f.elements.namedItem(key))f.elements.namedItem(key).value=val??'';});if(suggestAuto)f.elements.namedItem('fixedMonth').value='auto';toggleDueFields();$('#cardDialog').showModal();
 }
 function handleCardSubmit(e){
  e.preventDefault();clearCardError();
  const f=e.target, fd=new FormData(f), val=k=>String(fd.get(k)??'').trim();
  try{
   const old=s.cards.find(x=>x.id===val('id'));
-  let c={id:val('id')||uid(),bank:val('bank'),name:val('name')||val('bank'),last4:val('last4'),billingDay:Number(val('billingDay')),dueMode:val('dueMode'),offsetDays:Number(val('offsetDays')||20),fixedMonth:Number(val('fixedMonth')||0),fixedDay:Number(val('fixedDay')||10),available:val('available')};
+  let c={id:val('id')||uid(),bank:val('bank'),name:val('name')||val('bank'),last4:val('last4'),billingDay:Number(val('billingDay')),dueMode:val('dueMode'),offsetDays:Number(val('offsetDays')||20),fixedMonth:val('fixedMonth')==='auto'?'auto':Number(val('fixedMonth')||0),fixedDay:Number(val('fixedDay')||10),available:val('available')};
   if(!c.bank)throw Error('请填写银行名称');
   if(c.last4&&!/^\d{4}$/.test(c.last4))throw Error('卡号尾号必须为4位数字，或者留空');
   if(c.available!==''&&(!Number.isFinite(Number(c.available))||Number(c.available)<0))throw Error('可用额度格式不正确');
+  if(c.dueMode==='fixed'&&(![0,1,'auto'].includes(c.fixedMonth)||!Number.isInteger(c.fixedDay)||c.fixedDay<1||c.fixedDay>31))throw Error('请选择有效的还款日期规则');
   if(!Number.isInteger(c.billingDay)||c.billingDay<1||c.billingDay>31)throw Error('请选择1—31日之间的账单日');
   if(c.dueMode==='offset'&&(!Number.isInteger(c.offsetDays)||c.offsetDays<1||c.offsetDays>65))throw Error('还款间隔天数请填写1—65');
   const stmt=L.statementFor(c,2026,1),rep=L.repaymentFor(c,stmt);
@@ -233,7 +255,7 @@ async function refreshPush(){
 function openSettings(){$('#settingsDialog').showModal();updatePushStatus();refreshPush();}
 async function act(action,target){let key=target.dataset.cycle,id=target.dataset.id;
  switch(action){case 'settings':openSettings();break;case 'close-card':$('#cardDialog').close();break;case 'close-due':$('#dueDialog').close();break;case 'close-settings':$('#settingsDialog').close();break;
- case 'add':openCard();break;case 'edit-card':openCard(id);break;case 'delete-card':{const c=s.cards.find(x=>x.id===id);if(c&&confirm(`删除“${displayName(c)}”及其相关还款记录？`)){s.cards=s.cards.filter(x=>x.id!==id);for(const map of [s.paid,s.overrides,s.amounts])Object.keys(map).forEach(k=>{if(k.startsWith(id+'|'))delete map[k];});if(persist())toast('卡片已删除');else toast(storageError());}break;}
+ case 'add':openCard();break;case 'review-rule':openCard(id,true);break;case 'edit-card':openCard(id);break;case 'delete-card':{const c=s.cards.find(x=>x.id===id);if(c&&confirm(`删除“${displayName(c)}”及其相关还款记录？`)){s.cards=s.cards.filter(x=>x.id!==id);for(const map of [s.paid,s.overrides,s.amounts])Object.keys(map).forEach(k=>{if(k.startsWith(id+'|'))delete map[k];});if(persist())toast('卡片已删除');else toast(storageError());}break;}
  case 'demo':makeDemo();break;case 'jump-date':selected=L.iso(L.addDays(todayDate(),Number(target.dataset.days)));render();break;
  case 'edit-due':openDue(key);break;case 'mark-paid':{let c=findCycle(key);if(c&&confirm(`确认“${displayName(c.card)}”的 ${L.zh(c.due)} 账期已全额还清？`)){s.paid[key]=true;if(persist())toast('已记录还款，本期停止提醒');else toast(storageError());}break;}
  case 'undo-paid':delete s.paid[key];if(persist())toast('已撤销还款确认');else toast(storageError());break;
@@ -244,7 +266,7 @@ async function act(action,target){let key=target.dataset.cycle,id=target.dataset
  }
 }
 document.addEventListener('click',e=>{let n=e.target.closest('[data-tab-target]');if(n){activeTab(n.dataset.tabTarget);return;}n=e.target.closest('[data-tab]');if(n){activeTab(n.dataset.tab);return;}n=e.target.closest('[data-action]');if(n)act(n.dataset.action,n);});
-document.addEventListener('change',e=>{if(e.target.id==='dueMode')toggleDueFields();if(e.target.id==='selectedDate'){try{selected=L.iso(L.fromISO(e.target.value));render();}catch(_){toast('请选择有效的日期');}}if(e.target.id==='spending'){amountFilter=e.target.value;render();}});
+document.addEventListener('change',e=>{if(e.target.closest('#cardForm'))updateRulePreview();if(e.target.id==='dueMode')toggleDueFields();if(e.target.id==='selectedDate'){try{selected=L.iso(L.fromISO(e.target.value));render();}catch(_){toast('请选择有效的日期');}}if(e.target.id==='spending'){amountFilter=e.target.value;render();}});
 $('#cardForm').addEventListener('invalid',e=>{
  const t=e.target;
  const labels={bank:'银行名称',name:'卡片昵称',last4:'卡号末四位',billingDay:'账单日',offsetDays:'还款间隔天数',fixedDay:'还款日',available:'当前可用额度'};
@@ -252,7 +274,7 @@ $('#cardForm').addEventListener('invalid',e=>{
  const msg=t.validity.valueMissing?`请填写${field}`:t.validity.patternMismatch?`${field}需要4位数字，或者留空`:t.validity.rangeUnderflow||t.validity.rangeOverflow?`${field}超出允许范围`:`${field}格式有误，请检查`;
  cardError(msg);
 },true);
-$('#cardForm').addEventListener('input',()=>clearCardError());
+$('#cardForm').addEventListener('input',()=>{clearCardError();updateRulePreview();});
 $('#cardForm').addEventListener('change',()=>clearCardError());
 $('#cardForm').addEventListener('submit',handleCardSubmit);$('#dueForm').addEventListener('submit',handleDueSubmit);
 $('#importFile').addEventListener('change',e=>importData(e.target.files[0]));

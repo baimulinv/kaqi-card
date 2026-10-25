@@ -41,14 +41,15 @@
       <label>还款日期计算方式
         <select name="dueMode" id="dueMode">
           <option value="offset">账单日后固定天数</option>
-          <option value="fixed">固定月/日期</option>
+          <option value="fixed">每月固定还款日</option>
         </select>
       </label>
       <div id="offsetGroup"><label>账单日后多少天还款 <input name="offsetDays" type="number" min="1" max="65" value="20" required></label></div>
       <div id="fixedGroup" hidden class="formgrid">
-        <label>还款月份 <select name="fixedMonth"><option value="0">账单当月</option><option value="1">账单次月</option></select></label>
+        <label>与账单的月份关系 <select name="fixedMonth"><option value="auto">自动判断（推荐）</option><option value="0">账单当月</option><option value="1">账单次月</option></select></label>
         <label>每月还款日 <select name="fixedDay" id="fixedDay"></select></label>
       </div>
+      <p id="cardRulePreview" class="helper" role="status"></p>
       <label>当前可用额度（选填，元） <input name="available" inputmode="decimal" type="number" min="0" step="0.01" placeholder="不填则不参与额度筛选"></label>
       <p class="helper">请根据实际银行账单核对规则。账单日当天的消费可能跨期，不保证本工具推算结果与银行完全一致。</p>
       <p id="cardFormError" class="form-error" role="alert" hidden></p>
@@ -87,12 +88,12 @@
       <input id="importFile" type="file" accept=".json,application/json" hidden>
       <hr>
       <button class="destructive full" type="button" data-action="clear-demo">清除演示卡片</button>
-      <p class="fineprint">版本 1.1.2 · 本工具只做日期估算与提醒，不连接银行、不代替银行账单、不执行还款。</p>
+      <p class="fineprint">版本 1.1.3 · 本工具只做日期估算与提醒，不连接银行、不代替银行账单、不执行还款。</p>
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
   <script src="./logic.js"></script>
-  <script src="./push-config.js?v=1.1.2"></script>
-  <script src="./app.js?v=1.1.2"></script>
+  <script src="./push-config.js?v=1.1.3"></script>
+  <script src="./app.js?v=1.1.3"></script>
 </body>
 </html>

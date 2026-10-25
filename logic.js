@@ -20,10 +20,15 @@
   const ym = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
   const cycleKey = (card, statement) => `${card.id}|${ym(statement)}`;
   const statementFor = (card,year,month) => dateForMonth(year,month,card.billingDay);
+  function fixedMonthFor(card, statement) {
+    if (card.fixedMonth !== 'auto') return Number(card.fixedMonth || 0);
+    const sameMonth = dateForMonth(statement.getFullYear(), statement.getMonth()+1, card.fixedDay);
+    return sameMonth > statement ? 0 : 1;
+  }
   function repaymentFor(card, statement, actualDue) {
     if (actualDue) return fromISO(actualDue);
     if (card.dueMode === 'fixed') {
-      const d = shiftMonth(statement, Number(card.fixedMonth || 0));
+      const d = shiftMonth(statement, fixedMonthFor(card, statement));
       return dateForMonth(d.getFullYear(), d.getMonth()+1, card.fixedDay);
     }
     return addDays(statement, Number(card.offsetDays || 20));
@@ -68,5 +73,5 @@
     }
     return result;
   }
-  return {fromISO,iso,daysInMonth,dateForMonth,shiftMonth,addDays,dayDiff,today,zh,fullZh,ym,cycleKey,statementFor,repaymentFor,spend,dueCycles,upcoming,projectedReminders};
+  return {fromISO,iso,daysInMonth,dateForMonth,shiftMonth,addDays,dayDiff,today,zh,fullZh,ym,cycleKey,statementFor,fixedMonthFor,repaymentFor,spend,dueCycles,upcoming,projectedReminders};
 });
