@@ -74,6 +74,7 @@
       <div class="settings-item"><div><strong>到期推送通知</strong><p class="muted">北京时间：提前3天、提前1天、还款当天上午9点起发送</p><p class="muted" id="pushHelp">网站已上线，正在检查推送服务连接。</p></div><span id="pushStatus" class="status-pill">检查中</span></div>
       <p class="muted">开启后，仅将提醒日期和通知订阅同步到你的 Cloudflare 推送后台，不上传银行名称、卡号或金额。手机是否响铃取决于通知、静音与专注模式设置。</p>
       <button class="primary full" type="button" data-action="enable-push" disabled>开启手机推送</button>
+      <button class="outline full" type="button" data-action="retry-push">重新检测连接</button>
       <button class="outline full" type="button" data-action="test-push" disabled>测试手机通知</button>
       <button class="outline full" type="button" data-action="disable-push" disabled>停止推送</button>
       <hr>
@@ -85,7 +86,7 @@
       <input id="importFile" type="file" accept=".json,application/json" hidden>
       <hr>
       <button class="destructive full" type="button" data-action="clear-demo">清除演示卡片</button>
-      <p class="fineprint">版本 1.1.0 · 本工具只做日期估算与提醒，不连接银行、不代替银行账单、不执行还款。</p>
+      <p class="fineprint">版本 1.1.1 · 本工具只做日期估算与提醒，不连接银行、不代替银行账单、不执行还款。</p>
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>

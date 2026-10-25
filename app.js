@@ -10,7 +10,8 @@ function load(){try{let s=JSON.parse(localStorage.getItem(STORAGE));if(s&&Array.
 let storageProblem=false;
 let s=load(); let tab=new URLSearchParams(location.search).get('tab')==='due'?'due':'home';let selected=L.iso(L.today()), amountFilter='', serverConfig=null, toastTimer=null,syncTimer=null;
 const PUSH_BASE=String(window.KAQI_PUSH_CONFIG?.apiBase||'').replace(/\/$/,'');
-let pushSyncProblem='',pushBusy=false;
+const PUSH_CANDIDATES=[...new Set([PUSH_BASE,...(Array.isArray(window.KAQI_PUSH_CONFIG?.fallbackBases)?window.KAQI_PUSH_CONFIG.fallbackBases:[]),'https://kaqi-notify.pages.dev','https://kaqi-push.175805629.workers.dev'].filter(Boolean).map(x=>String(x).replace(/\/$/,'')))];
+let activePushBase=PUSH_CANDIDATES[0],pushSyncProblem='',pushBusy=false,pushChecking=false;
 function persist(){
  let ok=false;
  try{
@@ -142,9 +143,18 @@ function exportICS(){let entries=L.projectedReminders(s.cards,todayDate(),s.over
  let lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//KAQI//Credit Card Reminders//ZH','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
  entries.forEach((x,i)=>{const d=x.due.replace(/-/g,'');lines.push('BEGIN:VEVENT',`UID:${x.cardId}-${x.cycleId.split('|')[1]}@kaqi`,`DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')}`,`DTSTART:${d}T090000`,`DTEND:${d}T091000`,`SUMMARY:${escapeICS('信用卡还款核对 · '+x.label)}`,`DESCRIPTION:${escapeICS('预计还款日。实际还款日及是否有待还金额，以银行账单为准；已还款可忽略。')}`);[4320,1440,0].forEach(m=>lines.push('BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${escapeICS('信用卡还款日期核对 · '+x.label)}`,`TRIGGER:${m===0?'PT0M':'-PT'+m+'M'}`,'END:VALARM'));lines.push('END:VEVENT');});lines.push('END:VCALENDAR');download(lines.join('\r\n'),'卡期_还款提醒日历.ics','text/calendar;charset=utf-8');toast('已导出日历文件。日历通知是否生效取决于导入的日历应用');}
 async function getConfig(){
- if(!PUSH_BASE)return serverConfig={pushAvailable:false,vapidPublicKey:''};
- try{const r=await fetch(PUSH_BASE+'/api/config',{cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error();const cfg=await r.json();if(typeof cfg.pushAvailable!=='boolean')throw Error();return serverConfig=cfg;}
- catch(_){return serverConfig={pushAvailable:false,vapidPublicKey:''};}
+ try{
+  const ready=await Promise.any(PUSH_CANDIDATES.map(async base=>{
+   const r=await fetch(base+'/api/config',{cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(7000)});
+   if(!r.ok)throw Error('HTTP '+r.status);
+   const cfg=await r.json();
+   if(typeof cfg.pushAvailable!=='boolean')throw Error('Invalid configuration');
+   if(!cfg.pushAvailable){const e=Error('Service is not ready');e.serviceNotReady=true;throw e;}
+   if(typeof cfg.vapidPublicKey!=='string'||!cfg.vapidPublicKey)throw Error('Missing public key');
+   return {base,cfg};
+  }));
+  activePushBase=ready.base;return serverConfig=ready.cfg;
+ }catch(error){return serverConfig={pushAvailable:false,vapidPublicKey:'',connectionFailed:!(error.errors||[]).some(e=>e.serviceNotReady)};}
 }
 function updatePushStatus(){
  const e=$('#pushStatus'),help=$('#pushHelp');
@@ -152,17 +162,19 @@ function updatePushStatus(){
  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
  const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
  const permission=supported?Notification.permission:'unsupported';
- e.textContent=pushBusy?'处理中':!serverConfig?'检查中':!serverConfig.pushAvailable?'推送服务未连接':!supported?'当前浏览器不支持':permission==='denied'?'通知权限被拒绝':s.pushEnabled?(pushSyncProblem?'待同步':'已开启'):'待开启';
- help.textContent=!serverConfig?'网站已上线，正在检查推送服务连接。':!serverConfig.pushAvailable?'网站已上线；自动推送后台尚未连接。连接成功后才能开启手机通知。':ios&&!standalone?'请先用 Safari 分享→添加到主屏幕，再从主屏幕打开卡期，点击开启并允许通知。':pushSyncProblem||'推送后台已连接。开启通知后可关闭网页；更改还款日期或标记已还款后，请保持联网完成同步。';
- $('[data-action="enable-push"]').disabled=pushBusy||!serverConfig?.pushAvailable||!supported||permission==='denied'||s.pushEnabled;
+ e.textContent=pushBusy?'处理中':pushChecking||!serverConfig?'检查中':!serverConfig.pushAvailable?(serverConfig.connectionFailed?'连接未成功':'通知服务未就绪'):!supported?'当前浏览器不支持':permission==='denied'?'通知权限被拒绝':s.pushEnabled?(pushSyncProblem?'待同步':'已开启'):'待开启';
+ help.textContent=!serverConfig?'正在检测通知服务连接，请稍候。':!serverConfig.pushAvailable?(serverConfig.connectionFailed?'当前网络未能连接通知服务。可切换网络后点击“重新检测连接”重试。':'通知服务当前未就绪，请稍后重新检测。'):ios&&!standalone?'请先用 Safari 分享→添加到主屏幕，再从主屏幕打开卡期，点击开启并允许通知。':permission==='denied'?'通知权限已被拒绝，请到设备系统通知设置中允许卡期通知，再重新打开应用。':pushSyncProblem||'通知服务已连接。开启通知后可关闭网页；更改还款日期或标记已还款后，请保持联网完成同步。';
+ $('[data-action="retry-push"]').hidden=Boolean(serverConfig?.pushAvailable)&&!pushChecking;
+ $('[data-action="retry-push"]').disabled=pushChecking||pushBusy;
+ $('[data-action="enable-push"]').disabled=pushBusy||pushChecking||!serverConfig?.pushAvailable||!supported||permission==='denied'||s.pushEnabled;
  $('[data-action="test-push"]').disabled=pushBusy||!serverConfig?.pushAvailable||!s.pushEnabled;
  $('[data-action="disable-push"]').disabled=pushBusy||!s.pushEnabled;
 }
 function b64ToUint(str){const p='='.repeat((4-str.length%4)%4);return unbase64(str.replace(/-/g,'+').replace(/_/g,'/')+p);}
 const privateReminderDates=()=>L.projectedReminders(s.cards,todayDate(),s.overrides,s.paid).map(({due})=>({due}));
 async function pushRequest(path,body={}){
- if(!PUSH_BASE)throw Error('推送服务未连接');
- const r=await fetch(PUSH_BASE+'/api/'+path,{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.deviceKey},body:JSON.stringify(body),signal:AbortSignal.timeout(20000)});
+ if(!activePushBase)throw Error('通知服务未连接');
+ const r=await fetch(activePushBase+'/api/'+path,{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.deviceKey},body:JSON.stringify(body),signal:AbortSignal.timeout(20000)});
  let result;try{result=await r.json();}catch(_){result={};}
  if(!r.ok){const e=Error(result.error||'推送服务请求失败');e.status=r.status;throw e;}return result;
 }
@@ -195,12 +207,14 @@ async function disablePush(){if(pushBusy)return;pushBusy=true;updatePushStatus()
  }catch(e){toast('关闭失败：'+e.message);}finally{pushBusy=false;updatePushStatus();}}
 async function testPush(){if(!s.pushEnabled||pushBusy){toast('请先开启推送');return;}pushBusy=true;updatePushStatus();try{await pushRequest('test');toast('推送通道已接受测试请求，请检查手机通知中心');}catch(e){toast(e.message||'测试失败');}finally{pushBusy=false;updatePushStatus();}}
 async function refreshPush(){
- await getConfig();
+ if(pushChecking)return;
+ pushChecking=true;serverConfig=null;updatePushStatus();
+ try{await getConfig();
  if(s.pushEnabled&&serverConfig.pushAvailable){
   try{const reg=await navigator.serviceWorker.getRegistration('./');if(Notification.permission!=='granted'||!reg||!await reg.pushManager.getSubscription()){s.pushEnabled=false;persist();}else{await pushRequest('status');await syncSchedule();}}
   catch(e){if(e.status===404||e.status===410){s.pushEnabled=false;persist();}pushSyncProblem='设备通知登记需要检查：'+e.message;}
  }
- updatePushStatus();
+ }finally{pushChecking=false;updatePushStatus();}
 }
 function openSettings(){$('#settingsDialog').showModal();updatePushStatus();refreshPush();}
 async function act(action,target){let key=target.dataset.cycle,id=target.dataset.id;
@@ -210,6 +224,7 @@ async function act(action,target){let key=target.dataset.cycle,id=target.dataset
  case 'edit-due':openDue(key);break;case 'mark-paid':{let c=findCycle(key);if(c&&confirm(`确认“${displayName(c.card)}”的 ${L.zh(c.due)} 账期已全额还清？`)){s.paid[key]=true;if(persist())toast('已记录还款，本期停止提醒');else toast(storageError());}break;}
  case 'undo-paid':delete s.paid[key];if(persist())toast('已撤销还款确认');else toast(storageError());break;
  case 'enable-push':await enablePush();break;case 'disable-push':await disablePush();break;case 'test-push':await testPush();break;
+ case 'retry-push':await refreshPush();break;
  case 'export':await exportData();break;case 'import':$('#importFile').click();break;case 'ics':exportICS();break;
  case 'clear-demo':{const count=s.cards.filter(x=>x.isDemo).length;if(!count){toast('没有演示卡片');break;}if(confirm(`清除 ${count} 张演示卡及其相关记录？`)){const ids=new Set(s.cards.filter(x=>x.isDemo).map(x=>x.id));s.cards=s.cards.filter(x=>!x.isDemo);for(const map of [s.paid,s.overrides,s.amounts])Object.keys(map).forEach(k=>{if(ids.has(k.split('|')[0]))delete map[k];});if(persist())toast('演示卡已清除');else toast(storageError());}break;}
  }
