@@ -32,12 +32,6 @@ function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('sh
 function dueLabel(c){return c.dueMode==='fixed'?(c.fixedMonth==='auto'?`每月${c.fixedDay}日（自动对应账期）`:`账单${Number(c.fixedMonth)===0?'当月':'次月'}${c.fixedDay}日还款`):`账单日后${c.offsetDays}天还款`;}
 function needsRuleReview(c){return c.dueMode==='fixed'&&Number(c.fixedMonth)===1&&Number(c.fixedDay)>Number(c.billingDay);}
 function ruleReview(c){return needsRuleReview(c)?`<div class="paper due-item"><strong>${pretty(c)} · 还款月份待核对</strong><p class="tip">当前保存为${esc(dueLabel(c))}，会让新消费多跨一个月。请按银行账单核对；若账单${c.billingDay}日对应同月${c.fixedDay}日还款，请使用自动判断。</p><button class="outline full" data-action="review-rule" data-id="${esc(c.id)}">核对并修正还款月份</button></div>`:'';}
-function renderCurrentDues(){
- const rows=L.upcoming(s.cards,todayDate(),s.overrides,s.paid);
- let html='<div class="section-head"><h2>最近待核对还款</h2><button class="linkbtn" data-tab-target="due">还款日程 ›</button></div>';
- rows.slice(0,3).forEach(r=>{html+=`<div class="paper due-item"><div class="due-line"><div><div class="due-title">${pretty(r.card)}</div><div class="due-sub">预计 ${L.fullZh(r.due)}</div></div><span class="due-badge ${r.days<0?'over':r.days<=5?'near':''}">${labelDay(r.days)}</span></div></div>`;});
- return html+'<p class="tip">按已保存的日期规则生成待核对账期；实际应还金额和日期请核对银行账单。</p>';
-}
 function pretty(c){return `${esc(c.bank)}${c.name && c.name!==c.bank?' · '+esc(c.name):''}`;}
 function displayName(c){return `${c.bank}${c.name && c.name!==c.bank?' · '+c.name:''}`;}
 function todayDate(){return L.today();}
@@ -47,9 +41,9 @@ function emptyCards(){return `<div class="paper empty"><div class="empty-icon">�
 function cardLine(r,i,valid){const c=r.card;return `<div class="paper result"><div class="rank ${i===0&&valid?'first':''}">${i+1}</div><div class="grow"><div class="result-title">${pretty(c)}${c.last4?' · '+esc(c.last4):''}</div><div class="result-sub">预计还款 ${L.zh(r.due)} ${r.ambiguous?' · 账单日边界':''}${!valid?' · 额度不足':''}</div></div><div class="number"><strong>${r.days}</strong><small>天后归还新消费</small></div></div>`;}
 function renderHome(){
  const d=L.fromISO(selected);
- let content=`<div class="eyebrow">${esc(new Intl.DateTimeFormat('zh-CN',{month:'long',day:'numeric',weekday:'long'}).format(d))}</div><h1 class="headline">今天刷哪张卡？</h1><p class="subhead">分别核对最近还款日期，以及新消费的预计还款时间。</p>`;
+ let content=`<div class="eyebrow">${esc(new Intl.DateTimeFormat('zh-CN',{month:'long',day:'numeric',weekday:'long'}).format(d))}</div><h1 class="headline">今天刷哪张卡？</h1><p class="subhead">按所选刷卡日期，比较新消费的预计还款时间。</p>`;
  if(!s.cards.length)return content+emptyCards();
- content+=s.cards.map(ruleReview).join('')+renderCurrentDues();
+ content+=s.cards.map(ruleReview).join('');
  content+='<div class="section-head"><h2>新消费用卡推荐</h2></div><p class="tip">以下按所选刷卡日期计算新消费对应的账单和还款日。</p>';
  const spending=amountFilter!==''&&Number(amountFilter)>0?Number(amountFilter):0;
  const rows=s.cards.map(c=>L.spend(c,d,s.overrides)).map(r=>({...r,eligible:!(spending>0&&r.card.available!==''&&r.card.available!=null&&Number(r.card.available)<spending)})).sort((a,b)=>Number(b.eligible)-Number(a.eligible)||b.days-a.days);
