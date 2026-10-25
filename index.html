@@ -76,6 +76,7 @@
       <button class="primary full" type="button" data-action="enable-push" disabled>开启手机推送</button>
       <button class="outline full" type="button" data-action="retry-push">重新检测连接</button>
       <button class="outline full" type="button" data-action="test-push" disabled>测试手机通知</button>
+      <p id="pushTestResult" class="helper" role="status" hidden></p>
       <button class="outline full" type="button" data-action="disable-push" disabled>停止推送</button>
       <hr>
       <strong>备份与恢复</strong>
@@ -86,12 +87,12 @@
       <input id="importFile" type="file" accept=".json,application/json" hidden>
       <hr>
       <button class="destructive full" type="button" data-action="clear-demo">清除演示卡片</button>
-      <p class="fineprint">版本 1.1.1 · 本工具只做日期估算与提醒，不连接银行、不代替银行账单、不执行还款。</p>
+      <p class="fineprint">版本 1.1.2 · 本工具只做日期估算与提醒，不连接银行、不代替银行账单、不执行还款。</p>
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
   <script src="./logic.js"></script>
-  <script src="./push-config.js"></script>
-  <script src="./app.js"></script>
+  <script src="./push-config.js?v=1.1.2"></script>
+  <script src="./app.js?v=1.1.2"></script>
 </body>
 </html>

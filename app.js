@@ -205,7 +205,21 @@ async function disablePush(){if(pushBusy)return;pushBusy=true;updatePushStatus()
  let removed=true;try{await pushRequest('unsubscribe');}catch(_){removed=false;}
  s.pushEnabled=false;pushSyncProblem='';persist();toast(removed?'已关闭本机推送并清除云端订阅':'已关闭本机通知；云端无效订阅将在后续发送时清理');
  }catch(e){toast('关闭失败：'+e.message);}finally{pushBusy=false;updatePushStatus();}}
-async function testPush(){if(!s.pushEnabled||pushBusy){toast('请先开启推送');return;}pushBusy=true;updatePushStatus();try{await pushRequest('test');toast('推送通道已接受测试请求，请检查手机通知中心');}catch(e){toast(e.message||'测试失败');}finally{pushBusy=false;updatePushStatus();}}
+async function testPush(){
+ if(!s.pushEnabled||pushBusy){toast('请先开启推送');return;}
+ let result=$('#pushTestResult');if(!result){result=document.createElement('p');result.id='pushTestResult';result.setAttribute('role','status');$('[data-action="test-push"]').after(result);}result.hidden=false;result.className='helper';result.textContent='正在发送测试通知，请稍候……';
+ pushBusy=true;updatePushStatus();
+ try{
+  const response=await pushRequest('test');
+  if(response.accepted!==true)throw Error('通知通道尚未确认接受，请稍后重试');
+  result.textContent=`${response.provider||'通知通道'} 已接受测试通知${response.providerStatus?'（HTTP '+response.providerStatus+'）':''}。请在锁屏或通知中心查看。`;
+  toast('测试通知已提交，请查看手机通知中心');
+ }catch(e){
+  if(e.status===404||e.status===410){s.pushEnabled=false;persist();}
+  const message=e.name==='TimeoutError'?'请求超时，请重新检测连接后再测试':e instanceof TypeError?'网络连接未完成，请重新检测后再测试':e.message||'请稍后重试';
+  result.className='form-error';result.textContent='测试未成功：'+message;toast('测试未成功，详细原因已显示在按钮下方');
+ }finally{pushBusy=false;updatePushStatus();}
+}
 async function refreshPush(){
  if(pushChecking)return;
  pushChecking=true;serverConfig=null;updatePushStatus();
