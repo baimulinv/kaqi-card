@@ -5,14 +5,14 @@ const STORAGE='kaqi-v1';
 const $=s=>document.querySelector(s);
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=> {const b=new Uint8Array(18); crypto.getRandomValues(b); return Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');};
-const fresh=()=>({cards:[],paid:{},overrides:{},amounts:{},deviceKey:uid(),pushEnabled:false});
+const fresh=()=>({cards:[],paid:{},overrides:{},amounts:{},deviceKey:uid(),pushEnabled:false,barkEnabled:false,barkSound:'alarm',barkRepeat:true});
 function load(){try{let s=JSON.parse(localStorage.getItem(STORAGE));if(s&&Array.isArray(s.cards))return {...fresh(),...s,paid:s.paid||{},overrides:s.overrides||{},amounts:s.amounts||{}};}catch(e){}return fresh();}
 let storageProblem=false;
 let s=load(); let tab=new URLSearchParams(location.search).get('tab')==='due'?'due':'home';let selected=L.iso(L.today()), amountFilter='', serverConfig=null, toastTimer=null,syncTimer=null;
 const PUSH_BASE=String(window.KAQI_PUSH_CONFIG?.apiBase||'').replace(/\/$/,'');
 const PUSH_CANDIDATES=[...new Set([PUSH_BASE,...(Array.isArray(window.KAQI_PUSH_CONFIG?.fallbackBases)?window.KAQI_PUSH_CONFIG.fallbackBases:[]),'https://kaqi-notify.pages.dev','https://kaqi-push.175805629.workers.dev'].filter(Boolean).map(x=>String(x).replace(/\/$/,'')))];
 let activePushBase=PUSH_CANDIDATES[0],pushSyncProblem='',pushBusy=false,pushChecking=false;
-function persist(){
+function persist(sync=true){
  let ok=false;
  try{
   const serialized=JSON.stringify(s);
@@ -21,7 +21,7 @@ function persist(){
   ok=true;storageProblem=false;
  }catch(e){storageProblem=true;console.warn('Kaqi storage unavailable',e);}
  render();
- if(ok&&s.pushEnabled){clearTimeout(syncTimer);syncTimer=setTimeout(syncSchedule,600);}
+ if(ok&&sync&&(s.pushEnabled||s.barkEnabled)){clearTimeout(syncTimer);syncTimer=setTimeout(syncSchedule,600);}
  return ok;
 }
 function storageError(){return '保存失败：当前打开方式不允许存储数据。请改用支持本地存储的浏览器访问 HTTPS 站点，或检查浏览器的隐私/存储设置。';}
@@ -171,15 +171,26 @@ async function getConfig(){
   activePushBase=ready.base;return serverConfig=ready.cfg;
  }catch(error){return serverConfig={pushAvailable:false,vapidPublicKey:'',connectionFailed:!(error.errors||[]).some(e=>e.serviceNotReady)};}
 }
+function updateBarkStatus(){
+ const status=$('#barkStatus'),help=$('#barkHelp');if(!status)return;
+ const ready=serverConfig?.pushAvailable&&serverConfig?.barkAvailable;
+ status.textContent=pushBusy?'处理中':pushChecking?'检查中':!ready?(serverConfig?.connectionFailed?'连接未成功':'等待服务连接'):s.barkEnabled?(pushSyncProblem?'待同步':'已开启'):'未绑定';
+ help.textContent=!ready?'正在连接通知服务；如果一直未连接，可点下方“重新检测连接”。':s.barkEnabled?(pushSyncProblem||'Bark提醒已开启。改铃声后先点“保存Bark设置”。查看卡片请回原桌面卡期，修改或还款后需联网同步。'):'复制Bark首页的推送地址并粘贴到下方，绑定后点“测试Bark铃声”。';
+ $('[data-action="bind-bark"]').disabled=pushBusy||pushChecking||!ready;
+ $('[data-action="bind-bark"]').textContent=s.barkEnabled?'保存Bark设置':'绑定并开启Bark';
+ $('[data-action="test-bark"]').disabled=pushBusy||pushChecking||!ready||!s.barkEnabled;
+ $('[data-action="disable-bark"]').disabled=pushBusy||!s.barkEnabled;
+}
 function updatePushStatus(){
+ updateBarkStatus();
  const e=$('#pushStatus'),help=$('#pushHelp');
  const supported='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
  const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
  const permission=supported?Notification.permission:'unsupported';
  e.textContent=pushBusy?'处理中':pushChecking||!serverConfig?'检查中':!serverConfig.pushAvailable?(serverConfig.connectionFailed?'连接未成功':'通知服务未就绪'):!supported?'当前浏览器不支持':permission==='denied'?'通知权限被拒绝':s.pushEnabled?(pushSyncProblem?'待同步':'已开启'):'待开启';
- help.textContent=!serverConfig?'正在检测通知服务连接，请稍候。':!serverConfig.pushAvailable?(serverConfig.connectionFailed?'当前网络未能连接通知服务。可切换网络后点击“重新检测连接”重试。':'通知服务当前未就绪，请稍后重新检测。'):ios&&!standalone?'请先用 Safari 分享→添加到主屏幕，再从主屏幕打开卡期，点击开启并允许通知。':permission==='denied'?'通知权限已被拒绝，请到设备系统通知设置中允许卡期通知，再重新打开应用。':pushSyncProblem||'通知服务已连接。开启通知后可关闭网页；更改还款日期或标记已还款后，请保持联网完成同步。';
- $('[data-action="retry-push"]').hidden=Boolean(serverConfig?.pushAvailable)&&!pushChecking;
+ help.textContent=s.barkEnabled?'本机已改用Bark响铃。重新开启网页通知会切换回网页通道。':!serverConfig?'正在检测通知服务连接，请稍候。':!serverConfig.pushAvailable?(serverConfig.connectionFailed?'当前网络未能连接通知服务。可切换网络后点击“重新检测连接”重试。':'通知服务当前未就绪，请稍后重新检测。'):ios&&!standalone?'请先用 Safari 分享→添加到主屏幕，再从主屏幕打开卡期，点击开启并允许通知。':permission==='denied'?'通知权限已被拒绝，请到设备系统通知设置中允许卡期通知，再重新打开应用。':pushSyncProblem||'通知服务已连接。开启通知后可关闭网页；更改还款日期或标记已还款后，请保持联网完成同步。';
+ $('[data-action="retry-push"]').hidden=Boolean(serverConfig?.pushAvailable&&serverConfig?.barkAvailable)&&!pushChecking;
  $('[data-action="retry-push"]').disabled=pushChecking||pushBusy;
  $('[data-action="enable-push"]').disabled=pushBusy||pushChecking||!serverConfig?.pushAvailable||!supported||permission==='denied'||s.pushEnabled;
  $('[data-action="test-push"]').disabled=pushBusy||!serverConfig?.pushAvailable||!s.pushEnabled;
@@ -193,7 +204,7 @@ async function pushRequest(path,body={}){
  let result;try{result=await r.json();}catch(_){result={};}
  if(!r.ok){const e=Error(result.error||'推送服务请求失败');e.status=r.status;throw e;}return result;
 }
-async function syncSchedule(){if(!s.pushEnabled)return false;try{
+async function syncSchedule(){if(!s.pushEnabled&&!s.barkEnabled)return false;try{
  await pushRequest('sync',{reminders:privateReminderDates()});pushSyncProblem='';updatePushStatus();return true;
  }catch(err){pushSyncProblem='本机记录已保存，但推送同步未完成：'+err.message+'。联网后重新打开卡期重试。';updatePushStatus();toast('记录已保存，推送同步未完成，请检查设置');return false;}}
 async function enablePush(){const conf=serverConfig;if(pushBusy)return;if(!conf?.pushAvailable){toast('网站已上线，推送服务仍未连接');return;}
@@ -207,7 +218,7 @@ async function enablePush(){const conf=serverConfig;if(pushBusy)return;if(!conf?
   const reg=await Promise.race([navigator.serviceWorker.ready,new Promise((_,reject)=>setTimeout(()=>reject(Error('通知组件未就绪，请刷新重试')),10000))]);
   subscription=await reg.pushManager.getSubscription();if(!subscription){subscription=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToUint(conf.vapidPublicKey)});created=true;}
   await pushRequest('subscribe',{subscription:subscription.toJSON(),reminders:privateReminderDates()});registered=true;
-  s.pushEnabled=true;if(!persist())throw Error(storageError());pushSyncProblem='';toast('推送已登记。请点“测试手机通知”确认这台设备能收到');
+  s.pushEnabled=true;s.barkEnabled=false;if(!persist())throw Error(storageError());pushSyncProblem='';toast('推送已登记。请点“测试手机通知”确认这台设备能收到');
  }catch(e){
   s.pushEnabled=false;persist();
   if(registered)try{await pushRequest('unsubscribe');}catch(_){}
@@ -235,17 +246,63 @@ async function testPush(){
   result.className='form-error';result.textContent='测试未成功：'+message;toast('测试未成功，详细原因已显示在按钮下方');
  }finally{pushBusy=false;updatePushStatus();}
 }
+async function bindBark(){
+ if(pushBusy)return;if(!serverConfig?.barkAvailable){toast('Bark服务尚未连接，请重新检测连接');return;}
+ if(!persist()){toast(storageError());return;}
+ const address=$('#barkAddress').value.trim(),sound=$('#barkSound').value,repeat=$('#barkRepeat').checked;
+ if(!address&&!s.barkEnabled){toast('请先粘贴Bark首页的推送地址');$('#barkAddress').focus();return;}
+ pushBusy=true;updatePushStatus();
+ try{
+  await pushRequest('subscribe',{channel:'bark',bark:{address,sound,repeat},reminders:privateReminderDates()});
+  s.barkEnabled=true;s.pushEnabled=false;s.barkSound=sound;s.barkRepeat=repeat;pushSyncProblem='';$('#barkAddress').value='';
+  if(!persist(false))throw Error(storageError());
+  const result=$('#barkTestResult');result.hidden=false;result.className='helper';result.textContent='Bark已绑定。请点“测试Bark铃声”，确认这台手机能收到并响铃。';
+  toast('Bark已绑定，接下来测试铃声');
+ }catch(e){toast('绑定未完成：'+(e.message||'请重新检查地址'));}
+ finally{pushBusy=false;updatePushStatus();}
+}
+async function testBark(){
+ if(pushBusy||!s.barkEnabled)return;
+ const result=$('#barkTestResult');result.hidden=false;result.className='helper';result.textContent='正在发送Bark测试通知，请留意手机响铃……';
+ pushBusy=true;updatePushStatus();
+ try{
+  const response=await pushRequest('test',{channel:'bark'});
+  if(response.accepted!==true||response.provider!=='Bark')throw Error('Bark通道尚未确认接受');
+  result.textContent='Bark已接受测试通知。请确认是否听到所选铃声；响铃由手机通知、音量与专注模式设置决定。';
+ }catch(e){
+  if(e.status===404||e.status===410){s.barkEnabled=false;persist();}
+  result.className='form-error';result.textContent='Bark测试未成功：'+(e.name==='TimeoutError'?'请求超时，请稍后重试':e.message||'请检查网络');
+ }finally{pushBusy=false;updatePushStatus();}
+}
+async function disableBark(){
+ if(pushBusy||!s.barkEnabled)return;pushBusy=true;updatePushStatus();
+ try{await pushRequest('unsubscribe',{channel:'bark'});s.barkEnabled=false;pushSyncProblem='';persist();toast('Bark提醒已停止');}
+ catch(e){if(e.status===404){s.barkEnabled=false;persist();}else toast('停止未完成：'+e.message);}
+ finally{pushBusy=false;updatePushStatus();}
+}
 async function refreshPush(){
  if(pushChecking)return;
  pushChecking=true;serverConfig=null;updatePushStatus();
  try{await getConfig();
- if(s.pushEnabled&&serverConfig.pushAvailable){
-  try{const reg=await navigator.serviceWorker.getRegistration('./');if(Notification.permission!=='granted'||!reg||!await reg.pushManager.getSubscription()){s.pushEnabled=false;persist();}else{await pushRequest('status');await syncSchedule();}}
-  catch(e){if(e.status===404||e.status===410){s.pushEnabled=false;persist();}pushSyncProblem='设备通知登记需要检查：'+e.message;}
+ if((s.pushEnabled||s.barkEnabled)&&serverConfig.pushAvailable){
+  try{
+   const status=await pushRequest('status');
+   if(status.channel==='bark'){
+    s.barkEnabled=true;s.pushEnabled=false;s.barkSound=status.sound||'alarm';s.barkRepeat=Boolean(status.repeat);
+    $('#barkSound').value=s.barkSound;$('#barkRepeat').checked=s.barkRepeat;persist(false);await syncSchedule();
+   }else{
+    const reg=await navigator.serviceWorker.getRegistration('./');
+    if(Notification.permission!=='granted'||!reg||!await reg.pushManager.getSubscription()){s.pushEnabled=false;s.barkEnabled=false;persist();}
+    else{s.pushEnabled=true;s.barkEnabled=false;await syncSchedule();}
+   }
+  }catch(e){if(e.status===404||e.status===410){s.pushEnabled=false;s.barkEnabled=false;persist();}pushSyncProblem='设备通知登记需要检查：'+e.message;}
  }
  }finally{pushChecking=false;updatePushStatus();}
 }
-function openSettings(){$('#settingsDialog').showModal();updatePushStatus();refreshPush();}
+function openSettings(){
+ $('#barkSound').value=s.barkSound||'alarm';$('#barkRepeat').checked=s.barkRepeat!==false;
+ $('#settingsDialog').showModal();updatePushStatus();refreshPush();
+}
 async function act(action,target){let key=target.dataset.cycle,id=target.dataset.id;
  switch(action){case 'settings':openSettings();break;case 'close-card':$('#cardDialog').close();break;case 'close-due':$('#dueDialog').close();break;case 'close-settings':$('#settingsDialog').close();break;
  case 'add':openCard();break;case 'review-rule':openCard(id,true);break;case 'edit-card':openCard(id);break;case 'delete-card':{const c=s.cards.find(x=>x.id===id);if(c&&confirm(`删除“${displayName(c)}”及其相关还款记录？`)){s.cards=s.cards.filter(x=>x.id!==id);for(const map of [s.paid,s.overrides,s.amounts])Object.keys(map).forEach(k=>{if(k.startsWith(id+'|'))delete map[k];});if(persist())toast('卡片已删除');else toast(storageError());}break;}
@@ -253,6 +310,7 @@ async function act(action,target){let key=target.dataset.cycle,id=target.dataset
  case 'edit-due':openDue(key);break;case 'mark-paid':{let c=findCycle(key);if(c&&confirm(`确认“${displayName(c.card)}”的 ${L.zh(c.due)} 账期已全额还清？`)){s.paid[key]=true;if(persist())toast('已记录还款，本期停止提醒');else toast(storageError());}break;}
  case 'undo-paid':delete s.paid[key];if(persist())toast('已撤销还款确认');else toast(storageError());break;
  case 'enable-push':await enablePush();break;case 'disable-push':await disablePush();break;case 'test-push':await testPush();break;
+ case 'bind-bark':await bindBark();break;case 'test-bark':await testBark();break;case 'disable-bark':await disableBark();break;
  case 'retry-push':await refreshPush();break;
  case 'export':await exportData();break;case 'import':$('#importFile').click();break;case 'ics':exportICS();break;
  case 'check-web-update':if(window.KaqiUpdates)await window.KaqiUpdates.check(true);break;
@@ -274,7 +332,7 @@ $('#cardForm').addEventListener('submit',handleCardSubmit);$('#dueForm').addEven
 $('#importFile').addEventListener('change',e=>importData(e.target.files[0]));
 render();
 document.addEventListener('kaqi:before-update',e=>{if(pushBusy||pushChecking||storageProblem)e.preventDefault();});
-if(s.pushEnabled)refreshPush();
-window.addEventListener('online',()=>{if(s.pushEnabled)refreshPush();});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&s.pushEnabled)refreshPush();});
+if(s.pushEnabled||s.barkEnabled)refreshPush();
+window.addEventListener('online',()=>{if(s.pushEnabled||s.barkEnabled)refreshPush();});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&(s.pushEnabled||s.barkEnabled))refreshPush();});
 })();

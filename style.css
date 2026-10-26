@@ -7,3 +7,5 @@ html,body,.shell,.dialog{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;
 .shell{-webkit-user-select:none;user-select:none}
 input,textarea{-webkit-user-select:text;user-select:text}
 @media(pointer:coarse){input,select,textarea,.formstack input,.formstack select{font-size:16px}}
+
+.formstack .checkline{flex-direction:row;align-items:center;gap:10px;font-weight:500}.formstack .checkline input{width:20px;height:20px;min-height:20px;padding:0;flex:none}

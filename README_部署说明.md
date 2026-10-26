@@ -1,4 +1,4 @@
-# 卡期 · 智能用卡助手 v1.1.6
+# 卡期 · 智能用卡助手 v1.2.0
 
 - 网站：<https://baimulinv.github.io/kaqi-card/>
 - 源码：<https://github.com/baimulinv/kaqi-card>
@@ -72,3 +72,9 @@ iPhone桌面图标由系统缓存，网页内图标更新不代表已有桌面�
 这里的自动更新仅指网页程序。iPhone主屏幕已安装图标由iOS管理，没有网页强制刷新的接口；更新Manifest和图标地址不能保证既有桌面图标自动变化。不要为换图标直接删除已有应用/清理数据；如需要重新添加桌面入口，应先导出备份，并在新入口核对资料与通知后再考虑处理旧入口。
 
 参考：https://www.w3.org/TR/appmanifest/#updating-the-manifest ，https://webkit.org/blog/13878/ ，https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/HandlingEvents/HandlingEvents.html 。
+
+## Bark响铃提醒 v1.2.0
+
+手机安装官方Bark并允许通知，复制Bark首页推送地址；在原桌面卡期→设置→Bark响铃提醒中粘贴，选择铃声和是否连续响约30秒，绑定后测试。一次使用一个通知通道，绑定Bark会替代本机网页推送；其他设备不受影响。绑定地址仅保存在后台加密字段，不写入GitHub或导出备份，状态接口不返回地址。
+
+Bark只收到通用核对提醒，不收到银行卡名、卡号、金额或还款日期明细。通知不附跳转网址，核对资料请回原桌面卡期，避免进入Safari的独立空白存储。修改卡片、还款日期、导入备份或标记已还款后仍需联网同步。
