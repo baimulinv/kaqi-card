@@ -180,6 +180,8 @@ function updateBarkStatus(){
  $('[data-action="bind-bark"]').textContent=s.barkEnabled?'保存Bark设置':'绑定并开启Bark';
  $('[data-action="test-bark"]').disabled=pushBusy||pushChecking||!ready||!s.barkEnabled;
  $('[data-action="disable-bark"]').disabled=pushBusy||!s.barkEnabled;
+ $('#barkAddress').placeholder=s.barkEnabled?'已绑定，留空即可；更换地址时再填写':'粘贴 https://api.day.app/…';
+ $('#barkKeyHelp').textContent=s.barkEnabled?'Key已加密保存，不回显。修改铃声无需重新填写；只有更换绑定地址时才填写。':'首次绑定需要填写；绑定成功后输入框会清空，Key已加密保存。';
 }
 function updatePushStatus(){
  updateBarkStatus();
@@ -252,14 +254,15 @@ async function bindBark(){
  const showError=message=>{result.hidden=false;result.className='form-error';result.textContent='绑定未完成：'+message;};
  if(!serverConfig?.barkAvailable){showError('Bark服务尚未连接，请重新检测连接');return;}
  if(!persist(false)){showError(storageError());return;}
- const address=$('#barkAddress').value.trim(),sound=$('#barkSound').value,repeat=$('#barkRepeat').checked;
+ const address=$('#barkAddress').value.trim(),customSound=$('#barkSound').value==='custom',sound=customSound?$('#barkCustomName').value.trim():$('#barkSound').value,repeat=$('#barkRepeat').checked;
  if(!address&&!s.barkEnabled){showError('请先粘贴Bark首页的推送地址');$('#barkAddress').focus();return;}
+ if(customSound&&!sound){showError('请粘贴从Bark铃声列表复制的名称');$('#barkCustomName').focus();return;}
  result.hidden=false;result.className='helper';result.textContent='正在绑定Bark，请稍候……';
  pushBusy=true;updatePushStatus();
  try{
-  const response=await pushRequest('subscribe',{channel:'bark',bark:{address,sound,repeat},reminders:privateReminderDates()});
+  const response=await pushRequest('subscribe',{channel:'bark',bark:{address,sound,customSound,repeat},reminders:privateReminderDates()});
   if(response.ok!==true||response.channel!=='bark')throw Error('后台未确认Bark绑定，请重新检测连接后再试');
-  s.barkEnabled=true;s.pushEnabled=false;s.barkSound=sound;s.barkRepeat=repeat;pushSyncProblem='';$('#barkAddress').value='';
+  s.barkEnabled=true;s.pushEnabled=false;s.barkSound=sound;s.barkCustomSound=customSound;s.barkRepeat=repeat;pushSyncProblem='';$('#barkAddress').value='';
   if(!persist(false))throw Error(storageError());
   result.textContent='Bark已绑定。请点“测试Bark铃声”，确认这台手机能收到并响铃。';
   toast('Bark已绑定，接下来测试铃声');
@@ -293,8 +296,8 @@ async function refreshPush(){
   try{
    const status=await pushRequest('status');
    if(status.channel==='bark'){
-    s.barkEnabled=true;s.pushEnabled=false;s.barkSound=status.sound||'alarm';s.barkRepeat=Boolean(status.repeat);
-    $('#barkSound').value=s.barkSound;$('#barkRepeat').checked=s.barkRepeat;persist(false);await syncSchedule();
+    s.barkEnabled=true;s.pushEnabled=false;s.barkSound=status.sound||'alarm';s.barkCustomSound=Boolean(status.customSound);s.barkRepeat=Boolean(status.repeat);
+    $('#barkSound').value=s.barkCustomSound?'custom':s.barkSound;$('#barkCustomName').value=s.barkCustomSound?s.barkSound:'';$('#barkCustomField').hidden=!s.barkCustomSound;$('#barkRepeat').checked=s.barkRepeat;persist(false);await syncSchedule();
    }else{
     const reg=await navigator.serviceWorker.getRegistration('./');
     if(Notification.permission!=='granted'||!reg||!await reg.pushManager.getSubscription()){s.pushEnabled=false;s.barkEnabled=false;persist();}
@@ -305,7 +308,7 @@ async function refreshPush(){
  }finally{pushChecking=false;updatePushStatus();}
 }
 function openSettings(){
- $('#barkSound').value=s.barkSound||'alarm';$('#barkRepeat').checked=s.barkRepeat!==false;
+ $('#barkSound').value=s.barkCustomSound?'custom':s.barkSound||'alarm';$('#barkCustomName').value=s.barkCustomSound?s.barkSound:'';$('#barkCustomField').hidden=!s.barkCustomSound;$('#barkRepeat').checked=s.barkRepeat!==false;
  $('#settingsDialog').showModal();updatePushStatus();refreshPush();
 }
 async function act(action,target){let key=target.dataset.cycle,id=target.dataset.id;
@@ -323,7 +326,7 @@ async function act(action,target){let key=target.dataset.cycle,id=target.dataset
  }
 }
 document.addEventListener('click',e=>{let n=e.target.closest('[data-tab-target]');if(n){activeTab(n.dataset.tabTarget);return;}n=e.target.closest('[data-tab]');if(n){activeTab(n.dataset.tab);return;}n=e.target.closest('[data-action]');if(n)act(n.dataset.action,n);});
-document.addEventListener('change',e=>{if(e.target.closest('#cardForm'))updateRulePreview();if(e.target.id==='dueMode')toggleDueFields();if(e.target.id==='selectedDate'){try{selected=L.iso(L.fromISO(e.target.value));render();}catch(_){toast('请选择有效的日期');}}if(e.target.id==='spending'){amountFilter=e.target.value;render();}});
+document.addEventListener('change',e=>{if(e.target.id==='barkSound')$('#barkCustomField').hidden=e.target.value!=='custom';if(e.target.closest('#cardForm'))updateRulePreview();if(e.target.id==='dueMode')toggleDueFields();if(e.target.id==='selectedDate'){try{selected=L.iso(L.fromISO(e.target.value));render();}catch(_){toast('请选择有效的日期');}}if(e.target.id==='spending'){amountFilter=e.target.value;render();}});
 $('#cardForm').addEventListener('invalid',e=>{
  const t=e.target;
  const labels={bank:'银行名称',name:'卡片昵称',last4:'卡号末四位',billingDay:'账单日',offsetDays:'还款间隔天数',fixedDay:'还款日',available:'当前可用额度'};
