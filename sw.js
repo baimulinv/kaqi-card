@@ -1,5 +1,5 @@
-const CACHE='kaqi-static-pages-v1.2.2';
-const ASSETS=['./','./index.html','./style.css?v=1.2.2','./logic.js?v=1.2.2','./push-config.js?v=1.2.2','./app.js?v=1.2.2','./interaction.js?v=1.2.2','./app-update.js?v=1.2.2','./manifest.webmanifest?v=1.2.2','./icons/icon-180-v1.1.6.png','./icons/icon-192-v1.1.6.png','./icons/icon-512-v1.1.6.png'];
+const CACHE='kaqi-static-pages-v1.2.3';
+const ASSETS=['./','./index.html','./style.css?v=1.2.3','./logic.js?v=1.2.3','./push-config.js?v=1.2.3','./app.js?v=1.2.3','./sound-preview.js?v=1.2.3','./interaction.js?v=1.2.3','./app-update.js?v=1.2.3','./manifest.webmanifest?v=1.2.3','./sound-alarm-v1.mp3','./sound-minuet-v1.mp3','./sound-bell-v1.mp3','./sound-birdsong-v1.mp3','./sound-chime-v1.mp3','./sound-electronic-v1.mp3','./sound-glass-v1.mp3','./sound-horn-v1.mp3','./sound-telegraph-v1.mp3','./sound-typewriters-v1.mp3','./sound-multiwayinvitation-v1.mp3','./icons/icon-180-v1.1.6.png','./icons/icon-192-v1.1.6.png','./icons/icon-512-v1.1.6.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS.map(path=>new Request(new URL(path,self.registration.scope),{cache:'reload'})))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(x=>x.startsWith('kaqi-static-')&&x!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{

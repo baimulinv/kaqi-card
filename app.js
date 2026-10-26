@@ -297,7 +297,7 @@ async function refreshPush(){
    const status=await pushRequest('status');
    if(status.channel==='bark'){
     s.barkEnabled=true;s.pushEnabled=false;s.barkSound=status.sound||'alarm';s.barkCustomSound=Boolean(status.customSound);s.barkRepeat=Boolean(status.repeat);
-    $('#barkSound').value=s.barkCustomSound?'custom':s.barkSound;$('#barkCustomName').value=s.barkCustomSound?s.barkSound:'';$('#barkCustomField').hidden=!s.barkCustomSound;$('#barkRepeat').checked=s.barkRepeat;persist(false);await syncSchedule();
+    $('#barkSound').value=s.barkCustomSound?'custom':s.barkSound;$('#barkCustomName').value=s.barkCustomSound?s.barkSound:'';$('#barkCustomField').hidden=!s.barkCustomSound;$('#barkRepeat').checked=s.barkRepeat;$('#barkSound').dispatchEvent(new Event('change',{bubbles:true}));persist(false);await syncSchedule();
    }else{
     const reg=await navigator.serviceWorker.getRegistration('./');
     if(Notification.permission!=='granted'||!reg||!await reg.pushManager.getSubscription()){s.pushEnabled=false;s.barkEnabled=false;persist();}
@@ -309,7 +309,7 @@ async function refreshPush(){
 }
 function openSettings(){
  $('#barkSound').value=s.barkCustomSound?'custom':s.barkSound||'alarm';$('#barkCustomName').value=s.barkCustomSound?s.barkSound:'';$('#barkCustomField').hidden=!s.barkCustomSound;$('#barkRepeat').checked=s.barkRepeat!==false;
- $('#settingsDialog').showModal();updatePushStatus();refreshPush();
+ $('#barkSound').dispatchEvent(new Event('change',{bubbles:true}));$('#settingsDialog').showModal();updatePushStatus();refreshPush();
 }
 async function act(action,target){let key=target.dataset.cycle,id=target.dataset.id;
  switch(action){case 'settings':openSettings();break;case 'close-card':$('#cardDialog').close();break;case 'close-due':$('#dueDialog').close();break;case 'close-settings':$('#settingsDialog').close();break;

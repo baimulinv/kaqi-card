@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="description" content="信用卡最佳用卡日期计算与还款提醒。">
   <title>卡期 · 智能用卡助手</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=1.2.2">
+  <link rel="manifest" href="./manifest.webmanifest?v=1.2.3">
   <link sizes="180x180" rel="apple-touch-icon" href="./icons/icon-180-v1.1.6.png">
   <link rel="icon" href="./icons/icon-192-v1.1.6.png">
-  <link rel="stylesheet" href="./style.css?v=1.2.2">
+  <link rel="stylesheet" href="./style.css?v=1.2.3">
 </head>
 <body>
   <div class="shell">
@@ -78,6 +78,9 @@
       <p class="muted" id="barkKeyHelp">首次绑定需要填写；绑定成功后输入框会清空，Key已加密保存。</p>
       <label>提醒铃声（点这里选择） <select id="barkSound"><option value="alarm">闹铃（alarm）</option><option value="minuet">小步舞曲（minuet）</option><option value="bell">铃铛（bell）</option><option value="birdsong">鸟鸣（birdsong）</option><option value="chime">钟声（chime）</option><option value="electronic">电子音（electronic）</option><option value="glass">玻璃音（glass）</option><option value="horn">号角（horn）</option><option value="telegraph">电报（telegraph）</option><option value="typewriters">打字机（typewriters）</option><option value="multiwayinvitation">来电提示（multiwayinvitation）</option><option value="default">Bark默认通知音</option><option value="custom">其他／自己导入的铃声…</option></select></label>
       <label id="barkCustomField" hidden>铃声名称 <input id="barkCustomName" type="text" maxlength="84" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="粘贴从Bark复制的铃声名称"></label>
+      <button class="outline full" id="barkPreviewButton" type="button">▶ 试听所选铃声</button>
+      <audio id="barkPreviewAudio" preload="none" hidden></audio>
+      <p class="muted" id="barkPreviewStatus" role="status">试听只播放一次，不发送通知、不保存设置。</p>
       <p class="muted">更多铃声或试听：打开Bark首页→铃声／自定义铃声。选好后复制名称，在这里选“其他”并粘贴。自己的音频需先导入Bark，格式为.caf、时长不超过30秒。</p>
       <p class="muted">选完先点“保存Bark设置”，再点“测试Bark铃声”试听实际提醒。</p>
       <label class="checkline"><input id="barkRepeat" type="checkbox" checked><span>连续响铃约30秒（可关闭）</span></label>
@@ -104,14 +107,15 @@
       <button class="destructive full" type="button" data-action="clear-demo">清除演示卡片</button>
       <button type="button" class="outline full" data-action="check-web-update">检查网页更新</button>
       <p id="appUpdateStatus" class="helper" role="status">打开卡期或回到前台时自动检查网页更新。手机桌面图标由 iOS 管理，网页无法强制替换已有图标。</p>
-      <p class="fineprint">版本 1.2.2 · 本工具只做日期估算与提醒，不连接银行、不代替银行账单、不执行还款。</p>
+      <p class="fineprint">版本 1.2.3 · 本工具只做日期估算与提醒，不连接银行、不代替银行账单、不执行还款。</p>
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="./logic.js?v=1.2.2"></script>
-  <script src="./push-config.js?v=1.2.2"></script>
-  <script src="./interaction.js?v=1.2.2"></script>
-  <script src="./app-update.js?v=1.2.2"></script>
-  <script src="./app.js?v=1.2.2"></script>
+  <script src="./logic.js?v=1.2.3"></script>
+  <script src="./push-config.js?v=1.2.3"></script>
+  <script src="./interaction.js?v=1.2.3"></script>
+  <script src="./app-update.js?v=1.2.3"></script>
+  <script src="./app.js?v=1.2.3"></script>
+  <script src="./sound-preview.js?v=1.2.3"></script>
 </body>
 </html>
