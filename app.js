@@ -247,18 +247,23 @@ async function testPush(){
  }finally{pushBusy=false;updatePushStatus();}
 }
 async function bindBark(){
- if(pushBusy)return;if(!serverConfig?.barkAvailable){toast('Bark服务尚未连接，请重新检测连接');return;}
- if(!persist()){toast(storageError());return;}
+ if(pushBusy||pushChecking)return;
+ const result=$('#barkTestResult');
+ const showError=message=>{result.hidden=false;result.className='form-error';result.textContent='绑定未完成：'+message;};
+ if(!serverConfig?.barkAvailable){showError('Bark服务尚未连接，请重新检测连接');return;}
+ if(!persist(false)){showError(storageError());return;}
  const address=$('#barkAddress').value.trim(),sound=$('#barkSound').value,repeat=$('#barkRepeat').checked;
- if(!address&&!s.barkEnabled){toast('请先粘贴Bark首页的推送地址');$('#barkAddress').focus();return;}
+ if(!address&&!s.barkEnabled){showError('请先粘贴Bark首页的推送地址');$('#barkAddress').focus();return;}
+ result.hidden=false;result.className='helper';result.textContent='正在绑定Bark，请稍候……';
  pushBusy=true;updatePushStatus();
  try{
-  await pushRequest('subscribe',{channel:'bark',bark:{address,sound,repeat},reminders:privateReminderDates()});
+  const response=await pushRequest('subscribe',{channel:'bark',bark:{address,sound,repeat},reminders:privateReminderDates()});
+  if(response.ok!==true||response.channel!=='bark')throw Error('后台未确认Bark绑定，请重新检测连接后再试');
   s.barkEnabled=true;s.pushEnabled=false;s.barkSound=sound;s.barkRepeat=repeat;pushSyncProblem='';$('#barkAddress').value='';
   if(!persist(false))throw Error(storageError());
-  const result=$('#barkTestResult');result.hidden=false;result.className='helper';result.textContent='Bark已绑定。请点“测试Bark铃声”，确认这台手机能收到并响铃。';
+  result.textContent='Bark已绑定。请点“测试Bark铃声”，确认这台手机能收到并响铃。';
   toast('Bark已绑定，接下来测试铃声');
- }catch(e){toast('绑定未完成：'+(e.message||'请重新检查地址'));}
+ }catch(e){showError(e.name==='TimeoutError'?'请求超时，请检查网络后重试':e instanceof TypeError?'网络连接未完成，请重新检测连接后重试':e.message||'请重新检查地址');}
  finally{pushBusy=false;updatePushStatus();}
 }
 async function testBark(){
@@ -276,12 +281,12 @@ async function testBark(){
 }
 async function disableBark(){
  if(pushBusy||!s.barkEnabled)return;pushBusy=true;updatePushStatus();
- try{await pushRequest('unsubscribe',{channel:'bark'});s.barkEnabled=false;pushSyncProblem='';persist();toast('Bark提醒已停止');}
+ try{await pushRequest('unsubscribe',{channel:'bark'});s.barkEnabled=false;pushSyncProblem='';persist();$('#barkTestResult').hidden=false;$('#barkTestResult').className='helper';$('#barkTestResult').textContent='Bark提醒已停止。';toast('Bark提醒已停止');}
  catch(e){if(e.status===404){s.barkEnabled=false;persist();}else toast('停止未完成：'+e.message);}
  finally{pushBusy=false;updatePushStatus();}
 }
 async function refreshPush(){
- if(pushChecking)return;
+ if(pushChecking||pushBusy)return;
  pushChecking=true;serverConfig=null;updatePushStatus();
  try{await getConfig();
  if((s.pushEnabled||s.barkEnabled)&&serverConfig.pushAvailable){

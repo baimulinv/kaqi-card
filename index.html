@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="description" content="信用卡最佳用卡日期计算与还款提醒。">
   <title>卡期 · 智能用卡助手</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=1.2.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=1.2.1">
   <link sizes="180x180" rel="apple-touch-icon" href="./icons/icon-180-v1.1.6.png">
   <link rel="icon" href="./icons/icon-192-v1.1.6.png">
-  <link rel="stylesheet" href="./style.css?v=1.2.0">
+  <link rel="stylesheet" href="./style.css?v=1.2.1">
 </head>
 <body>
   <div class="shell">
@@ -78,8 +78,8 @@
       <label>提醒铃声 <select id="barkSound"><option value="alarm">闹铃（alarm）</option><option value="minuet">提示音（minuet）</option><option value="default">跟随Bark设置</option></select></label>
       <label class="checkline"><input id="barkRepeat" type="checkbox" checked><span>连续响铃约30秒（可关闭）</span></label>
       <button class="primary full" type="button" data-action="bind-bark" disabled>绑定并开启Bark</button>
-      <button class="outline full" type="button" data-action="test-bark" disabled>测试Bark铃声</button>
       <p id="barkTestResult" class="helper" role="status" hidden></p>
+      <button class="outline full" type="button" data-action="test-bark" disabled>测试Bark铃声</button>
       <button class="outline full" type="button" data-action="disable-bark" disabled>停止Bark提醒</button>
       <hr>
       <div class="settings-item"><div><strong>网页推送通知（备用）</strong><p class="muted">北京时间：提前3天、提前1天、还款当天上午9点起发送</p><p class="muted" id="pushHelp">网站已上线，正在检查推送服务连接。</p></div><span id="pushStatus" class="status-pill">检查中</span></div>
@@ -100,14 +100,14 @@
       <button class="destructive full" type="button" data-action="clear-demo">清除演示卡片</button>
       <button type="button" class="outline full" data-action="check-web-update">检查网页更新</button>
       <p id="appUpdateStatus" class="helper" role="status">打开卡期或回到前台时自动检查网页更新。手机桌面图标由 iOS 管理，网页无法强制替换已有图标。</p>
-      <p class="fineprint">版本 1.2.0 · 本工具只做日期估算与提醒，不连接银行、不代替银行账单、不执行还款。</p>
+      <p class="fineprint">版本 1.2.1 · 本工具只做日期估算与提醒，不连接银行、不代替银行账单、不执行还款。</p>
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="./logic.js?v=1.2.0"></script>
-  <script src="./push-config.js?v=1.2.0"></script>
-  <script src="./interaction.js?v=1.2.0"></script>
-  <script src="./app-update.js?v=1.2.0"></script>
-  <script src="./app.js?v=1.2.0"></script>
+  <script src="./logic.js?v=1.2.1"></script>
+  <script src="./push-config.js?v=1.2.1"></script>
+  <script src="./interaction.js?v=1.2.1"></script>
+  <script src="./app-update.js?v=1.2.1"></script>
+  <script src="./app.js?v=1.2.1"></script>
 </body>
 </html>

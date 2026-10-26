@@ -1,5 +1,5 @@
-const CACHE='kaqi-static-pages-v1.2.0';
-const ASSETS=['./','./index.html','./style.css?v=1.2.0','./logic.js?v=1.2.0','./push-config.js?v=1.2.0','./app.js?v=1.2.0','./interaction.js?v=1.2.0','./app-update.js?v=1.2.0','./manifest.webmanifest?v=1.2.0','./icons/icon-180-v1.1.6.png','./icons/icon-192-v1.1.6.png','./icons/icon-512-v1.1.6.png'];
+const CACHE='kaqi-static-pages-v1.2.1';
+const ASSETS=['./','./index.html','./style.css?v=1.2.1','./logic.js?v=1.2.1','./push-config.js?v=1.2.1','./app.js?v=1.2.1','./interaction.js?v=1.2.1','./app-update.js?v=1.2.1','./manifest.webmanifest?v=1.2.1','./icons/icon-180-v1.1.6.png','./icons/icon-192-v1.1.6.png','./icons/icon-512-v1.1.6.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS.map(path=>new Request(new URL(path,self.registration.scope),{cache:'reload'})))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(x=>x.startsWith('kaqi-static-')&&x!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
